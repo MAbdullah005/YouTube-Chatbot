@@ -1,5 +1,5 @@
 from langchain_core.prompts import PromptTemplate
-from langchain_ollama import ChatOllama   # <-- Correct LLM
+from langchain_ollama import ChatOllama   
 # from langchain_ollama import OllamaEmbeddings  # (Not used here)
 
 template = """
@@ -25,9 +25,12 @@ def build_rag_chain(vector_db):
     )
 
     def rag(query):
-        docs = vector_db.similarity_search(query, k=4)
-        context = "\n".join([d.page_content for d in docs])
-        final_prompt = prompt.format(context=context, question=query)
+        retriever = vector_db.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+        retrieved_docs    = retriever.invoke(query)
+       # docs = vector_db.similarity_search(query, k=4)
+        context = "\n\n".join(doc.page_content for doc in retrieved_docs)
+        #context = "\n\n".join([d.page_content for d in docs])
+        final_prompt = prompt.invoke({"context":context, "question":query})
         print("this is final prompt",final_prompt)
 
         # LLM can invoke
