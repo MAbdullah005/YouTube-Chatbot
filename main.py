@@ -7,11 +7,15 @@ from pydantic import BaseModel  # <-- import this
 from backend.core.loader import load_youtube_transcript
 from backend.core.splitter import chunk_text
 from backend.core.embeddings import get_embeddings
+from backend.core.loader import extract_video_id
+import time
 from backend.core.vectorstore import create_vector_db
 from backend.core.rag_chain import build_rag_chain
 
 app = FastAPI()
 rag_cache={}
+questions_no=1
+rag_cache["question_no"]=0
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,11 +39,15 @@ class AskRequest(BaseModel):
 
 @app.post("/ask")
 def ask_youtube(request: AskRequest):
-
+    start=time.perf_counter()
     video_url = request.video_url
+    video_id=extract_video_id(video_url)
+    rag_cache["question_no"]+=1
+    #questions_no=questions_no+1
 
     #  Reuse RAG if already built for this video
-    if video_url not in rag_cache:
+    if video_id not in rag_cache:
+        
         text = load_youtube_transcript(video_url)
 
         if not text.strip():
@@ -48,9 +56,19 @@ def ask_youtube(request: AskRequest):
         chunks = chunk_text(text)
         embeddings = get_embeddings()
         db = create_vector_db(chunks, embeddings)
-        rag_cache[video_url] = build_rag_chain(db)
+       # rag_cache[video_id] = db
+        rag_cache[video_id] = {
+        "db": db,
+        "rag": build_rag_chain(db)
+        }
+        
 
-    rag = rag_cache[video_url]
+    #rag = rag_cache[video_url]
+   # rag = build_rag_chain(rag_cache[video_id])
+    rag = rag_cache[video_id]["rag"]
     answer = rag(request.question)
+    end_time=time.perf_counter()
+    total_time=end_time-start
+    print(f"Execution took Question { rag_cache["question_no"]} got time {total_time} ")
 
     return {"answer": answer}

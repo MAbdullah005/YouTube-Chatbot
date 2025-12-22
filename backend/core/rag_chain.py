@@ -5,7 +5,7 @@ from backend.core.memorey import get_memory
 
 template = """
 You are a YouTube Video Chatbot.
-Use the following context and chat history to answer the question.
+Use the following context and chat history to answer the question .
 If the answer is not in the video, say "Not found in video".
 
 CHAT HISTORY:
@@ -27,14 +27,14 @@ def build_rag_chain(vector_db):
         input_variables=["context", "question", "chat_history"],
         template=template
     )
-
-    def rag(query: str):
-
-        #  Retrieve docs
-        retriever = vector_db.as_retriever(
+    retriever = vector_db.as_retriever(
             search_type="similarity",
             search_kwargs={"k": 3}
         )
+
+    def rag(query: str):
+
+        
         retrieved_docs = retriever.invoke(query)
         context = "\n\n".join(doc.page_content for doc in retrieved_docs)
 
