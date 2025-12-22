@@ -11,6 +11,7 @@ from backend.core.vectorstore import create_vector_db
 from backend.core.rag_chain import build_rag_chain
 
 app = FastAPI()
+rag_cache={}
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,14 +33,24 @@ class AskRequest(BaseModel):
     video_url: str
     question: str
 
-
 @app.post("/ask")
 def ask_youtube(request: AskRequest):
-    text = load_youtube_transcript(request.video_url)
-    chunks = chunk_text(text)
-    embeddings = get_embeddings()
-    db = create_vector_db(chunks, embeddings)
-    rag = build_rag_chain(db)
 
+    video_url = request.video_url
+
+    #  Reuse RAG if already built for this video
+    if video_url not in rag_cache:
+        text = load_youtube_transcript(video_url)
+
+        if not text.strip():
+            return {"answer": "Transcript not available for this video."}
+
+        chunks = chunk_text(text)
+        embeddings = get_embeddings()
+        db = create_vector_db(chunks, embeddings)
+        rag_cache[video_url] = build_rag_chain(db)
+
+    rag = rag_cache[video_url]
     answer = rag(request.question)
+
     return {"answer": answer}
