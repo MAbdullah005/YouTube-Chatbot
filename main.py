@@ -51,7 +51,7 @@ def ask_youtube(request: AskRequest):
         text = load_youtube_transcript(video_url)
 
         if not text.strip():
-            return {"answer": "Transcript not available for this video."}
+            return {"answer": "Transcript not  available for this video."}
 
         chunks = chunk_text(text)
         embeddings = get_embeddings()
