@@ -20,7 +20,8 @@ QUESTION:
 
 def build_rag_chain(vector_db):
 
-    llm = ChatOllama(model="llama3.2:1b")
+    llm = ChatOllama(model="llama3.2:1b",
+                     temperature=0.2,num_predict=256)
     memory = get_memory()
 
     prompt = PromptTemplate(
@@ -42,10 +43,11 @@ def build_rag_chain(vector_db):
         chat_history = memory.load_memory_variables({}).get("chat_history", "")
 
         #  Build final prompt
+        print("chat history *** ",chat_history)
         final_prompt = prompt.invoke({
+            "chat_history": chat_history,
             "context": context,
-            "question": query,
-            "chat_history": chat_history
+            "question": query
         })
 
         #  Call LLM

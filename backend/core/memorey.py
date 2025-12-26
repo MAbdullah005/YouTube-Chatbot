@@ -3,8 +3,8 @@ from langchain_classic.memory import ConversationBufferMemory,ConversationBuffer
 
 _memory=ConversationBufferWindowMemory(
         memory_key="chat_history",
-        return_messages=True,
-        k=5,
+        return_messages=False,
+        k=3,
     )
 def get_memory():
   return _memory

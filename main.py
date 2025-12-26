@@ -38,7 +38,7 @@ class AskRequest(BaseModel):
     question: str
 
 @app.post("/ask")
-def ask_youtube(request: AskRequest):
+async def ask_youtube(request: AskRequest):
     start=time.perf_counter()
     video_url = request.video_url
     video_id=extract_video_id(video_url)
@@ -52,8 +52,10 @@ def ask_youtube(request: AskRequest):
 
         if not text.strip():
             return {"answer": "Transcript not  available for this video."}
+        chunk_time=time.perf_counter()
 
         chunks = chunk_text(text)
+        print("Chunk done in time ")
         embeddings = get_embeddings()
         db = create_vector_db(chunks, embeddings)
        # rag_cache[video_id] = db
