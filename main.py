@@ -6,8 +6,10 @@ from pydantic import BaseModel  # <-- import this
 
 from backend.core.loader import load_youtube_transcript
 from backend.core.splitter import chunk_text
+#from backend.evaluation import latency_eval
 from backend.core.embeddings import get_embeddings
 from backend.core.loader import extract_video_id
+from backend.evaluation.latency_eval import latency_eval
 import time
 from backend.core.vectorstore import create_vector_db
 from backend.core.rag_chain import build_rag_chain
@@ -49,28 +51,40 @@ async def ask_youtube(request: AskRequest):
     if video_id not in rag_cache:
         
         text = load_youtube_transcript(video_url)
+        db_time=0.0
 
         if not text.strip():
             return {"answer": "Transcript not  available for this video."}
         chunk_time=time.perf_counter()
 
         chunks = chunk_text(text)
+        print("chunk time ",time.perf_counter()-chunk_time)
         print("Chunk done in time ")
+        embeding_time=time.perf_counter()
         embeddings = get_embeddings()
+        print("Embedding time ",time.perf_counter()-embeding_time)
+        db_time=time.perf_counter()
         db = create_vector_db(chunks, embeddings)
+        db_time=time.perf_counter()-db_time
        # rag_cache[video_id] = db
+        rag_chain_time=time.perf_counter()
         rag_cache[video_id] = {
         "db": db,
         "rag": build_rag_chain(db)
         }
+        print("Build rag chain time ",time.perf_counter()-rag_chain_time)
         
 
     #rag = rag_cache[video_url]
    # rag = build_rag_chain(rag_cache[video_id])
+    get_llm_answer=time.perf_counter()
     rag = rag_cache[video_id]["rag"]
     answer = rag(request.question)
+    llm_time=time.perf_counter()-get_llm_answer
     end_time=time.perf_counter()
     total_time=end_time-start
+   # metrics=latency_eval(llm_time,db_time,total_time)
     print(f"Execution took Question { rag_cache["question_no"]} got time {total_time} ")
+   # metrics['retrieval_time']=answer['Evaluation']['retrieval_time']
 
-    return {"answer": answer}
+    return {"ChatBot :": answer,"Evaluations :":answer["Evaluation"]}

@@ -1,7 +1,9 @@
-def latency_eval(retrieval_time,llm_time,total_time):
+def latency_eval(llm_time,db_time,total_time):
 
   metrics = {
-     "retrieval_time": retrieval_time,
      "llm_time": llm_time,
+     "db_time":db_time,
      "total_time": total_time
     }
+  
+  return metrics
