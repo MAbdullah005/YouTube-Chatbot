@@ -6,7 +6,7 @@ def llm_faithfullness_eval(llm,context,answer):
     ANSWER:
     {answer}
 
-    Is the answer fully supported by the context?
+    Is the answer fully Supported the by the context?
     Reply YES or NO.
     """
     result = llm.invoke(eval_prompt)
