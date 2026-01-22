@@ -1,22 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <title>YouTube Chatbot</title>
+    <title>YouTube RAG Chatbot</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-
 <body>
-    <h1>YouTube Chatbot</h1>
-    <input type="text" id="videoUrl" placeholder="YouTube Video URL" size="50">
-    <input type="text" id="question" placeholder="Ask your question" size="50">
-    <button id="askBtn">Ask</button>
 
-    <h2>Answer:</h2>
-    <div id="answer" style="white-space: pre-wrap;"></div>
+<h1>YouTube Video Chatbot</h1>
 
-    <script src="/static/app.js"></script>
+<!-- URL Input -->
+<div class="url-box">
+    <input type="text" id="videoUrl" placeholder="Paste YouTube Video URL">
+    <button id="loadBtn">Load Video</button>
+</div>
+
+<!-- Main Layout -->
+<div class="main-container">
+
+    <!-- Video Section -->
+    <div class="video-container">
+        <iframe
+            id="ytPlayer"
+            width="560"
+            height="315"
+            src=""
+            title="YouTube video player"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen>
+        </iframe>
+    </div>
+
+    <!-- Chat Section -->
+    <!-- Chat Section -->
+<div class="chat-container">
+
+    <!-- Messages -->
+    <div class="chat-box" id="chatBox">
+        <!-- messages will be appended here -->
+    </div>
+
+    <!-- Input -->
+    <div class="chat-input">
+        <textarea id="question" placeholder="Ask a question about this video..."></textarea>
+        <button id="askBtn">Ask</button>
+    </div>
+
+</div>
+
+</div>
+
+<script src="/static/app.js"></script>
 </body>
-
 </html>
+
