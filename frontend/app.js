@@ -1,53 +1,6 @@
-const loadBtn = document.getElementById("loadBtn");
-const askBtn = document.getElementById("askBtn");
-const videoInput = document.getElementById("videoUrl");
-const questionInput = document.getElementById("question");
-const chatBox = document.getElementById("chatBox");
-const videoPlayer = document.getElementById("ytPlayer");
-
-// Extract video ID
-function extractVideoId(url) {
-    try {
-        if (!url.startsWith("http")) {
-            url = "https://" + url;
-        }
-        const parsed = new URL(url);
-
-        if (parsed.hostname.includes("youtube.com")) {
-            return parsed.searchParams.get("v");
-        }
-        if (parsed.hostname.includes("youtu.be")) {
-            return parsed.pathname.slice(1);
-        }
-        return null;
-    } catch {
-        return null;
-    }
-}
-
-// Load video
-loadBtn.addEventListener("click", () => {
-    const videoId = extractVideoId(videoInput.value);
-    if (!videoId) {
-        alert("Invalid YouTube URL");
-        return;
-    }
-    videoPlayer.src = `https://www.youtube.com/embed/${videoId}`;
-});
-
-// Add message to UI
-function appendMessage(text, sender) {
-    const msg = document.createElement("div");
-    msg.className = `message ${sender}`;
-    msg.innerText = text;
-    chatBox.appendChild(msg);
-    chatBox.scrollTop = chatBox.scrollHeight;
-    return msg;
-}
-
-// Ask question
-askBtn.addEventListener("click", async () => {
-    console.log("ASK CLICKED");
+// Ask question (STREAMING)
+askBtn.addEventListener("click", () => {
+    console.log("ASK CLICKED (STREAM)");
 
     const video_url = videoInput.value;
     const question = questionInput.value.trim();
@@ -57,22 +10,32 @@ askBtn.addEventListener("click", async () => {
         return;
     }
 
+    // Show user message
     appendMessage(question, "user");
     questionInput.value = "";
 
-    const thinking = appendMessage("Thinking...", "bot");
+    // Create bot message container (empty for streaming)
+    const botMsg = appendMessage("🤖 ", "bot");
 
-    try {
-        const res = await fetch("/ask", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ video_url, question })
-        });
+    // Build stream URL
+    const streamUrl = `/stream?video_url=${encodeURIComponent(video_url)}&question=${encodeURIComponent(question)}`;
 
-        const data = await res.json();
-        thinking.innerText = "🤖 " + (data.answer || "No answer");
+    const eventSource = new EventSource(streamUrl);
 
-    } catch (err) {
-        thinking.innerText = "Error: " + err.message;
-    }
+    eventSource.onmessage = (event) => {
+        if (event.data === "[DONE]") {
+            eventSource.close();
+            return;
+        }
+
+        // Append streamed token
+        botMsg.innerText += event.data;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    };
+
+    eventSource.onerror = (err) => {
+        console.error("SSE error", err);
+        botMsg.innerText += "\n\n❌ Stream error";
+        eventSource.close();
+    };
 });
