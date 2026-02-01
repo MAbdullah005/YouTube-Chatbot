@@ -24,7 +24,8 @@ QUESTION:
 
 def build_rag_chain(vector_db):
     llm = ChatOllama(model="llama3.2:1b", temperature=0.2, num_predict=256)
-    memory = get_memory()
+    memory = get_memory(session_id="thread-1")
+
 
     prompt = PromptTemplate(
         input_variables=["chat_history", "context", "question"],

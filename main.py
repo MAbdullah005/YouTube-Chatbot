@@ -12,6 +12,11 @@ from backend.core.splitter import chunk_text
 from backend.core.embeddings import get_embeddings
 from backend.core.vectorstore import create_vector_db
 from backend.core.rag_chain import build_rag_chain
+import warnings
+from langchain_core._api.deprecation import LangChainDeprecationWarning
+
+warnings.filterwarnings("ignore", category=LangChainDeprecationWarning)
+
 
 app = FastAPI()
 
@@ -47,7 +52,7 @@ async def ask_youtube(request: AskRequest):
     if video_id not in rag_cache:
         text = load_youtube_transcript(video_url)
         if not text.strip():
-            return {"answer": "Transcript not available for this video."}
+            return {"answer": "Transcript not availasble for this video."}
         chunks = chunk_text(text)
         embeddings = get_embeddings()
         db = create_vector_db(chunks, embeddings)
@@ -65,39 +70,31 @@ async def ask_youtube(request: AskRequest):
 
 
 # ✅ Streaming endpoint
-def stream(self, query: str):
-    retrieved_docs = self.retriever.invoke(query)
-    context = "\n\n".join(doc.page_content for doc in retrieved_docs)
+@app.get("/stream")
+async def ask_youtube_stream(
+    video_url: str,
+    question: str
+):
+    video_id = extract_video_id(video_url)
 
-    chat_history = self.memory.load_memory_variables({}).get("chat_history", "")
+    if video_id not in rag_cache:
+        text = load_youtube_transcript(video_url)
+        if not text.strip():
+            return {"error": "Transcript not available"}
 
-    final_prompt = self.prompt.invoke({
-        "chat_history": chat_history,
-        "context": context,
-        "question": query
-    })
+        chunks = chunk_text(text)
+        embeddings = get_embeddings()
+        db = create_vector_db(chunks, embeddings)
+        rag_cache[video_id] = {"rag": build_rag_chain(db)}
 
-    human_msg = HumanMessage(str(final_prompt))
-
-    full_answer = []
-
-    for chunk in self.llm.stream(
-        [human_msg],
-        config={"configurable": {"thread_id": "thread-1"}}
-    ):
-        if chunk.content:
-            full_answer.append(chunk.content)
-            yield chunk.content  # 🔥 stream to frontend
-
-    # ✅ Save ONLY ONCE
-    self.memory.save_context(
-        {"question": query},
-        {"answer": "".join(full_answer)}
-    )
+    rag = rag_cache[video_id]["rag"]
 
     def event_generator():
         for chunk in rag.stream(question):
-            yield f"data: {json.dumps({'chunk': chunk})}\n\n"
-        yield f"data: {json.dumps({'chunk': '[DONE]'})}\n\n"
+            yield f"data: {chunk}\n\n"
+        yield "data: [DONE]\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream"
+    )
