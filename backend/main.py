@@ -1,4 +1,10 @@
-from backend.auth.security import hash_password, verify_password
+from fastapi import FastAPI
+from backend.auth.routes import router as auth_router
+from backend.db.base import Base
+from backend.db.session import engine
 
-h = hash_password("123456")
-print(verify_password("123456", h))  # True
+app = FastAPI()
+
+Base.metadata.create_all(bind=engine)
+
+app.include_router(auth_router)
