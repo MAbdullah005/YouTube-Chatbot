@@ -1,58 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>YouTube RAG Chatbot</title>
-    <link rel="stylesheet" href="/frontend/style.css">
+<meta charset="UTF-8">
+<title>YouTube RAG Chatbot</title>
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<h1>YouTube Video Chatbot</h1>
+<h1>🎥 YouTube Video Chatbot</h1>
 
-<!-- URL Input -->
 <div class="url-box">
     <input type="text" id="videoUrl" placeholder="Paste YouTube Video URL">
     <button id="loadBtn">Load Video</button>
 </div>
 
-<!-- Main Layout -->
 <div class="main-container">
 
-    <!-- Video Section -->
+    <!-- Video -->
     <div class="video-container">
-        <iframe
-            id="ytPlayer"
-            width="560"
-            height="315"
-            src=""
-            title="YouTube video player"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerpolicy="strict-origin-when-cross-origin"
-            allowfullscreen>
+        <iframe id="ytPlayer" src="" width="560" height="315" title="YouTube player"
+                frameborder="0" allowfullscreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share">
         </iframe>
     </div>
 
-    <!-- Chat Section -->
-    <!-- Chat Section -->
-<div class="chat-container">
-
-    <!-- Messages -->
-    <div class="chat-box" id="chatBox">
-        <!-- messages will be appended here -->
-    </div>
-
-    <!-- Input -->
-    <div class="chat-input">
-        <textarea id="question" placeholder="Ask a question about this video..."></textarea>
-        <button id="askBtn">Ask</button>
+    <!-- Chat -->
+    <div class="chat-container">
+        <div class="chat-box" id="chatBox"></div>
+        <div class="chat-input">
+            <textarea id="question" placeholder="Ask something about the video..."></textarea>
+            <button id="askBtn">Ask</button>
+        </div>
     </div>
 
 </div>
 
-</div>
+<script>
+const loadBtn = document.getElementById("loadBtn");
+const askBtn = document.getElementById("askBtn");
+const videoInput = document.getElementById("videoUrl");
+const questionInput = document.getElementById("question");
+const chatBox = document.getElementById("chatBox");
+const videoPlayer = document.getElementById("ytPlayer");
+let videoLoaded = false;
 
-<script src="/frontend/app.js"></script>
+function extractVideoId(url) {
+    try {
+        const parsed = new URL(url.startsWith("http") ? url : "https://" + url);
+        let id = null;
+        if (parsed.hostname.includes("youtube.com")) {
+            id = parsed.searchParams.get("v");
+        } else if (parsed.hostname.includes("youtu.be")) {
+            id = parsed.pathname.slice(1);
+        }
+        return id;
+    } catch {
+        return null;
+    }
+}
+
+loadBtn.addEventListener("click", () => {
+    const url = videoInput.value.trim();
+    const videoId = extractVideoId(url);
+    if (!videoId) {
+        alert("❌ Invalid YouTube URL");
+        return;
+    }
+    videoPlayer.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1`;
+    videoLoaded = true;
+    chatBox.innerHTML = "";
+});
+
+function appendMessage(text, sender) {
+    const msg = document.createElement("div");
+    msg.className = `message ${sender}`;
+    msg.innerText = text;
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return msg;
+}
+
+askBtn.addEventListener("click", () => {
+    const video_url = videoInput.value.trim();
+    const question = questionInput.value.trim();
+
+    if (!videoLoaded) {
+        alert("⚠️ Load a video first");
+        return;
+    }
+    if (!question) {
+        alert("⚠️ Enter a question");
+        return;
+    }
+
+    appendMessage(question, "user");
+    questionInput.value = "";
+
+    const botMsg = appendMessage("🤖 ", "bot");
+
+    const streamUrl = `/stream?video_url=${encodeURIComponent(video_url)}&question=${encodeURIComponent(question)}`;
+    const eventSource = new EventSource(streamUrl);
+
+    eventSource.onmessage = (event) => {
+        if (event.data === "[DONE]") {
+            eventSource.close();
+            return;
+        }
+        botMsg.innerText += event.data;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    };
+
+    eventSource.onerror = () => {
+        botMsg.innerText += "\n❌ Error while streaming";
+        eventSource.close();
+    };
+});
+</script>
+
 </body>
 </html>
-

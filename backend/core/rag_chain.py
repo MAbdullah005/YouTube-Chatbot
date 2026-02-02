@@ -23,7 +23,7 @@ QUESTION:
 """
 
 def build_rag_chain(vector_db):
-    llm = ChatOllama(model="llama3.2:1b", temperature=0.2, num_predict=256)
+    llm = ChatOllama(model="qwen2.5:7b", temperature=0.2, num_predict=256)
     memory = get_memory(session_id="thread-1")
 
 
