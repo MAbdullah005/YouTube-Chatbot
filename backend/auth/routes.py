@@ -11,7 +11,7 @@ from backend.auth.security import verify_password
 from backend.auth.jwt_utils import create_access_token
 from backend.auth.schemas import LoginRequest, LoginResponse
 from backend.models.users import User
-from backend.auth.email import send_reset_email 
+from backend.auth.email import send_reset_email # Abdullah Ali khna
 from backend.auth.email import get_current_user
 
 from backend.models.password_reset import PasswordReset

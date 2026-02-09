@@ -36,6 +36,14 @@
 </div>
 
 <script>
+const token = localStorage.getItem("token");
+
+if (!token) {
+    window.location.href = "auth";
+}
+</script>
+
+<script>
 const loadBtn = document.getElementById("loadBtn");
 const askBtn = document.getElementById("askBtn");
 const videoInput = document.getElementById("videoUrl");
@@ -43,6 +51,8 @@ const questionInput = document.getElementById("question");
 const chatBox = document.getElementById("chatBox");
 const videoPlayer = document.getElementById("ytPlayer");
 let videoLoaded = false;
+
+
 
 function extractVideoId(url) {
     try {

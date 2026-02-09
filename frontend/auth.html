@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Login | YouTube Chatbot</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.auth-box {
+    max-width: 400px;
+    margin: 80px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15);
+}
+
+.auth-box h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.auth-box input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+}
+
+.auth-box button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: #667eea;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.switch {
+    text-align: center;
+    margin-top: 10px;
+    cursor: pointer;
+    color: #667eea;
+}
+
+.error {
+    color: red;
+    text-align: center;
+    margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>YouTube Chatbot</h1>
+
+<div class="auth-box">
+    <h2 id="title">Login</h2>
+
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+
+    <button onclick="submitAuth()">Login</button>
+
+    <div class="switch" onclick="toggleMode()">Create account</div>
+    <div class="error" id="msg"></div>
+</div>
+
+<script>
+let mode = "login";
+
+function toggleMode() {
+    mode = mode === "login" ? "signup" : "login";
+    document.getElementById("title").innerText = mode === "login" ? "Login" : "Signup";
+    document.querySelector("button").innerText = mode === "login" ? "Login" : "Signup";
+    document.querySelector(".switch").innerText =
+        mode === "login" ? "Create account" : "Already have an account?";
+}
+
+async function submitAuth() {
+    const email = email.value;
+    const password = password.value;
+
+    const url = mode === "login"
+        ? "http://127.0.0.1:8000/auth/login"
+        : "http://127.0.0.1:8000/auth/signup";
+
+    const res = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+        msg.innerText = data.detail || data.message;
+        return;
+    }
+
+    if (mode === "signup") {
+        msg.innerText = "Check your email to verify account.";
+        return;
+    }
+
+    // LOGIN SUCCESS
+    localStorage.setItem("token", data.access_token);
+    window.location.href = "index.html";
+}
+</script>
+
+
+<script>
+async function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    const res = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+        localStorage.setItem("token", data.access_token);
+        window.location.href = "/chat";
+    } else {
+        alert(data.detail);
+    }
+}
+</script>
+
+</body>
+</html>

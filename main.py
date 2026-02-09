@@ -3,43 +3,65 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
-import time
+
+from backend.auth.routes import router as auth_router
+from backend.db.base import Base
+from backend.db.session import engine
+
 from backend.core.loader import load_youtube_transcript, extract_video_id
 from backend.core.splitter import chunk_text
 from backend.core.embeddings import get_embeddings
 from backend.core.vectorstore import create_vector_db
 from backend.core.rag_chain import build_rag_chain
 
-# Test sample video of 
-# https://www.youtube.com/watch?v=FCG6pVGPn9I  
 
+# ---------------- APP ----------------
 app = FastAPI()
 
-# RAG cache
-rag_cache = {"question_no": 0}
+# ---------------- DB ----------------
+Base.metadata.create_all(bind=engine)
 
-# CORS
+# ---------------- CORS ----------------
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Serve static files
+# ---------------- ROUTERS ----------------
+app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+
+# ---------------- STATIC FILES ----------------
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
+
 @app.get("/")
-def serve_frontend():
+def serve_chatbot():
     return FileResponse("frontend/index.html")
 
-# Request body
+
+@app.get("/auth")
+def serve_auth():
+    return FileResponse("frontend/auth.html")
+
+
+# ---------------- RAG CACHE ----------------
+rag_cache = {"question_no": 0}
+
+
+# ---------------- REQUEST BODY ----------------
 class AskRequest(BaseModel):
     video_url: str
     question: str
 
-# Non-streaming (optional)
+
+# ---------------- NON-STREAM ----------------
 @app.post("/ask")
 async def ask_youtube(request: AskRequest):
     video_url = request.video_url
     question = request.question
+
     video_id = extract_video_id(video_url)
     rag_cache["question_no"] += 1
 
@@ -47,6 +69,7 @@ async def ask_youtube(request: AskRequest):
         text = load_youtube_transcript(video_url)
         if not text.strip():
             return {"answer": "Transcript not available."}
+
         chunks = chunk_text(text)
         embeddings = get_embeddings()
         db = create_vector_db(chunks, embeddings)
@@ -54,9 +77,14 @@ async def ask_youtube(request: AskRequest):
 
     rag = rag_cache[video_id]["rag"]
     answer = rag(question)
-    return {"answer": answer["answer"], "evaluations": answer["Evaluation"]}
 
-# Streaming endpoint
+    return {
+        "answer": answer["answer"],
+        "evaluations": answer.get("Evaluation"),
+    }
+
+
+# ---------------- STREAM ----------------
 @app.get("/stream")
 async def stream_answer(video_url: str, question: str):
     video_id = extract_video_id(video_url)
@@ -65,7 +93,11 @@ async def stream_answer(video_url: str, question: str):
     if video_id not in rag_cache:
         text = load_youtube_transcript(video_url)
         if not text.strip():
-            return StreamingResponse(iter(["Transcript not available"]), media_type="text/event-stream")
+            return StreamingResponse(
+                iter(["Transcript not available"]),
+                media_type="text/event-stream",
+            )
+
         chunks = chunk_text(text)
         embeddings = get_embeddings()
         db = create_vector_db(chunks, embeddings)
