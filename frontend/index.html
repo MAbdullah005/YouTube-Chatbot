@@ -9,6 +9,42 @@
 
 <h1>🎥 YouTube Video Chatbot</h1>
 
+<div id="profileBox" style="
+    position:absolute;
+    top:20px;
+    left:20px;
+    background:#ffffff;
+    padding:10px 15px;
+    border-radius:10px;
+    font-size:14px;
+    color:black;
+">
+    Loading profile...
+</div>
+<div class="sidebar">
+    <h2>🎥 AI Chat</h2>
+    <div id="profileBox"></div>
+    <h3>Your Videos</h3>
+    <ul id="sessionList"></ul>
+    <button id="logoutBtn">Logout</button>
+</div>
+
+<div class="layout">
+    <div class="sidebar">
+        <h2>🎥 AI Chat</h2>
+        <button id="logoutBtn">Logout</button>
+        <div id="profileBox"></div>
+    </div>
+
+    <div class="main">
+        <!-- video + chat -->
+    </div>
+</div>
+
+<button id="logoutBtn" style="position:absolute; top:20px; right:20px;">
+Logout
+</button>
+
 <div class="url-box">
     <input type="text" id="videoUrl" placeholder="Paste YouTube Video URL">
     <button id="loadBtn">Load Video</button>
@@ -16,15 +52,10 @@
 
 <div class="main-container">
 
-    <!-- Video -->
     <div class="video-container">
-        <iframe id="ytPlayer" src="" width="560" height="315" title="YouTube player"
-                frameborder="0" allowfullscreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share">
-        </iframe>
+        <iframe id="ytPlayer" width="560" height="315" allowfullscreen></iframe>
     </div>
 
-    <!-- Chat -->
     <div class="chat-container">
         <div class="chat-box" id="chatBox"></div>
         <div class="chat-input">
@@ -39,46 +70,132 @@
 const token = localStorage.getItem("token");
 
 if (!token) {
-    window.location.href = "auth";
+    window.location.href = "/";
 }
-</script>
 
-<script>
+// ---------------- PROFILE ----------------
+async function loadProfile() {
+    try {
+        const res = await fetch("/auth/me", {
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        });
+
+        if (!res.ok) {
+            localStorage.removeItem("token");
+            window.location.href = "/";
+            return;
+        }
+
+        const user = await res.json();
+
+        document.getElementById("profileBox").innerHTML =
+            `👤 ${user.email} <br>
+             ✅ Verified: ${user.is_verified ? "Yes" : "No"}`;
+
+    } catch (err) {
+        document.getElementById("profileBox").innerText =
+            "Error loading profile";
+    }
+}
+
+
+
+
+async function loadSessions() {
+    const res = await fetch("/chat/sessions", {
+        headers: { "Authorization": "Bearer " + token }
+    });
+
+    if (!res.ok) return;
+
+    const sessions = await res.json();
+    const sessionList = document.getElementById("sessionList");
+    sessionList.innerHTML = "";
+
+    sessions.forEach(s => {
+        const li = document.createElement("li");
+        li.innerText = `Video: ${s.video_id} (${new Date(s.created_at).toLocaleString()})`;
+        li.style.cursor = "pointer";
+        li.addEventListener("click", () => {
+            videoInput.value = `https://youtu.be/${s.video_id}`;
+            loadBtn.click();  // simulate loading video
+        });
+        sessionList.appendChild(li);
+    });
+}
+
+// Call after loading profile
+loadProfile().then(loadSessions);
+
+// ---------------- LOGOUT ----------------
+document.getElementById("logoutBtn").addEventListener("click", () => {
+    localStorage.removeItem("token");
+    window.location.href = "/";
+});
+
+// ---------------- VIDEO + CHAT ----------------
 const loadBtn = document.getElementById("loadBtn");
 const askBtn = document.getElementById("askBtn");
 const videoInput = document.getElementById("videoUrl");
 const questionInput = document.getElementById("question");
 const chatBox = document.getElementById("chatBox");
 const videoPlayer = document.getElementById("ytPlayer");
+
 let videoLoaded = false;
-
-
 
 function extractVideoId(url) {
     try {
-        const parsed = new URL(url.startsWith("http") ? url : "https://" + url);
-        let id = null;
+        const parsed = new URL(url);
         if (parsed.hostname.includes("youtube.com")) {
-            id = parsed.searchParams.get("v");
+            return parsed.searchParams.get("v");
         } else if (parsed.hostname.includes("youtu.be")) {
-            id = parsed.pathname.slice(1);
+            return parsed.pathname.slice(1);
         }
-        return id;
-    } catch {
-        return null;
-    }
+    } catch {}
+    return null;
 }
 
 loadBtn.addEventListener("click", () => {
     const url = videoInput.value.trim();
     const videoId = extractVideoId(url);
+
     if (!videoId) {
-        alert("❌ Invalid YouTube URL");
+        alert("Invalid YouTube URL");
         return;
     }
-    videoPlayer.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1`;
+
+    videoPlayer.src =
+        `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1`;
+
     videoLoaded = true;
     chatBox.innerHTML = "";
+    loadHistory(url);
+
+
+
+    async function loadHistory(video_url) {
+    const res = await fetch(
+        `/chat/history?video_url=${encodeURIComponent(video_url)}`,
+        {
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        }
+    );
+
+    const messages = await res.json();
+
+    chatBox.innerHTML = "";
+
+    messages.forEach(msg => {
+        appendMessage(msg.content, msg.role === "assistant" ? "bot" : "user");
+    });
+}
+
+
+
 });
 
 function appendMessage(text, sender) {
@@ -91,15 +208,17 @@ function appendMessage(text, sender) {
 }
 
 askBtn.addEventListener("click", () => {
+
     const video_url = videoInput.value.trim();
     const question = questionInput.value.trim();
 
     if (!videoLoaded) {
-        alert("⚠️ Load a video first");
+        alert("Load a video first");
         return;
     }
+
     if (!question) {
-        alert("⚠️ Enter a question");
+        alert("Enter a question");
         return;
     }
 
@@ -108,7 +227,11 @@ askBtn.addEventListener("click", () => {
 
     const botMsg = appendMessage("🤖 ", "bot");
 
-    const streamUrl = `/stream?video_url=${encodeURIComponent(video_url)}&question=${encodeURIComponent(question)}`;
+    const streamUrl =
+        `/stream?video_url=${encodeURIComponent(video_url)}`
+        + `&question=${encodeURIComponent(question)}`
+        + `&token=${encodeURIComponent(token)}`;
+
     const eventSource = new EventSource(streamUrl);
 
     eventSource.onmessage = (event) => {
@@ -117,11 +240,10 @@ askBtn.addEventListener("click", () => {
             return;
         }
         botMsg.innerText += event.data;
-        chatBox.scrollTop = chatBox.scrollHeight;
     };
 
     eventSource.onerror = () => {
-        botMsg.innerText += "\n❌ Error while streaming";
+        botMsg.innerText += "\nError while streaming";
         eventSource.close();
     };
 });

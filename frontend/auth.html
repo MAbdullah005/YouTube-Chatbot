@@ -4,53 +4,6 @@
 <meta charset="UTF-8">
 <title>Login | YouTube Chatbot</title>
 <link rel="stylesheet" href="/static/style.css">
-<style>
-.auth-box {
-    max-width: 400px;
-    margin: 80px auto;
-    background: white;
-    padding: 30px;
-    border-radius: 14px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.15);
-}
-
-.auth-box h2 {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.auth-box input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 12px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-}
-
-.auth-box button {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    background: #667eea;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.switch {
-    text-align: center;
-    margin-top: 10px;
-    cursor: pointer;
-    color: #667eea;
-}
-
-.error {
-    color: red;
-    text-align: center;
-    margin-top: 10px;
-}
-</style>
 </head>
 
 <body>
@@ -63,38 +16,43 @@
     <input id="email" placeholder="Email">
     <input id="password" type="password" placeholder="Password">
 
-    <button onclick="submitAuth()">Login</button>
+    <button id="submitBtn">Login</button>
 
-    <div class="switch" onclick="toggleMode()">Create account</div>
+    <div class="switch" id="switchBtn">Create account</div>
     <div class="error" id="msg"></div>
 </div>
 
 <script>
 let mode = "login";
 
-function toggleMode() {
+const submitBtn = document.getElementById("submitBtn");
+const switchBtn = document.getElementById("switchBtn");
+const msg = document.getElementById("msg");
+
+// If already logged in → go to chat
+if (localStorage.getItem("token")) {
+    window.location.href = "/chat";
+}
+
+switchBtn.addEventListener("click", () => {
     mode = mode === "login" ? "signup" : "login";
 
     document.getElementById("title").innerText =
         mode === "login" ? "Login" : "Signup";
 
-    document.querySelector("button").innerText =
+    submitBtn.innerText =
         mode === "login" ? "Login" : "Signup";
 
-    document.querySelector(".switch").innerText =
+    switchBtn.innerText =
         mode === "login"
             ? "Create account"
             : "Already have an account?";
-}
+});
 
-async function submitAuth() {
+submitBtn.addEventListener("click", async () => {
 
-    const emailInput = document.getElementById("email");
-    const passwordInput = document.getElementById("password");
-    const msg = document.getElementById("msg");
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
 
     if (!email || !password) {
         msg.innerText = "Email and password required";
@@ -115,26 +73,41 @@ async function submitAuth() {
         const data = await res.json();
 
         if (!res.ok) {
-            msg.innerText = data.detail || data.message;
+            msg.innerText = data.detail || "Authentication failed";
             return;
         }
 
         if (mode === "signup") {
-            msg.innerText = "Check your email to verify account.";
+            msg.innerText = "Account created. Please login.";
+            mode = "login";
+            submitBtn.innerText = "Login";
+            switchBtn.innerText = "Create account";
             return;
         }
 
         // LOGIN SUCCESS
+        //----
+        //document
+        console.log("LOGIN RESPONSE:", data);
+
+        if (!data.access_token) {
+            msg.innerText = "Login failed. No token returned.";
+            return;
+            }
+
         localStorage.setItem("token", data.access_token);
+
+        console.log("TOKEN SAVED:", localStorage.getItem("token"));
+
         window.location.href = "/chat";
 
-    } catch (error) {
-        msg.innerText = "Server error. Check backend.";
-        console.error(error);
-    }
-}
-</script>
+        //-----
 
+    } catch {
+        msg.innerText = "Server error";
+    }
+});
+</script>
 
 </body>
 </html>

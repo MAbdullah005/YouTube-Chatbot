@@ -17,6 +17,17 @@ from backend.auth.email import send_verification_email, send_reset_email, get_cu
 router = APIRouter(tags=["Auth"])
 
 
+
+
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "is_verified": current_user.is_verified
+    }
+
+
 # ---------------- SIGNUP ----------------
 @router.post("/signup", response_model=SignupResponse)
 async def signup(data: SignupRequest, db: Session = Depends(get_db)):
