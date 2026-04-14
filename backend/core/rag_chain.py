@@ -15,7 +15,7 @@ RULES:
 3. Do NOT guess.
 4. Do NOT hallucinate.
 5. If the answer is not clearly present in the context, respond exactly with:
-   "I couldn’t find this information in the video. Please try asking another question."
+   "I could not find this information in the video. Please try asking another question."
 
 STYLE:
 - Be clear and concise.

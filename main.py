@@ -12,6 +12,7 @@ from backend.models.users import User
 from backend.db.base import Base
 from backend.db.session import engine
 
+
 from backend.core.loader import load_youtube_transcript, extract_video_id
 from backend.core.splitter import chunk_text
 from backend.core.embeddings import get_embeddings
@@ -20,6 +21,9 @@ from backend.core.rag_chain import build_rag_chain
 
 from jose import jwt, JWTError
 from backend.auth.jwt_utils import SECRET_KEY, ALGORITHM
+
+# https://www.youtube.com/watch?v=AFEZzf9_EHk
+
 
 app = FastAPI()
 
